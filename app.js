@@ -75,7 +75,18 @@ client.on('messageCreate', message => {
 
     }).catch(error => {
       console.error(error);
-      console.log(error.response.data);
+
+      if (error.response && error.response.data) {
+        if ( error.response.data.error && error.response.data.error.message) {
+          if (running_conversation && error.response.data.error.message.startsWith("This model's maximum context length")) {
+            // Tokens are a bit tricky to manage, so if we run out of tokens, just reset the conversation
+            message.channel.send("Sorry, could you please repeat that?");
+            conversations[message.channel] = "";
+          }
+        }
+        console.log(error.response.data);
+      }
+      
     });
   } //End of OPENAI COMMAND
 
