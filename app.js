@@ -419,6 +419,10 @@ const handle_openai_error = (error, message) => {
       if (error.response.data.error.message.startsWith("That model is currently overloaded")) {
         message.channel.send("Sorry, I'm a bit bogged down right now. Try again in a few minutes!");
       }
+
+      if (error.response.data.error.message.startsWith("You exceeded your current quota")) {
+        message.channel.send("Sorry, I'm out of credits. Try again later!");
+      }
     }
     console.log(error.response.data);
   }
