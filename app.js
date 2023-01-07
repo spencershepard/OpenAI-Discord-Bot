@@ -59,6 +59,17 @@ client.on('messageCreate', message => {
     const args = message.content.split(' ');
     // Get the command and any additional arguments
     const command = args[0];
+    if (args.length < 2) {
+      message.channel.send("Please provide a prompt.");
+      return;
+    }
+
+    var temperature = 0.9;
+    if (message.content.includes("bereal") || message.content.includes("be real") || message.content.includes("be honest") || message.content.includes("no really") || message.content.includes("for real")) {
+      temperature = 0;
+      console.log("Setting temperature to 0, because we found an honesty prompt.");
+    }
+
     const text = args.slice(1).join(' ');
     var prompt = text;
     if (running_conversation) {
@@ -76,7 +87,7 @@ client.on('messageCreate', message => {
       model: 'text-davinci-003',
       max_tokens: 486,
       n: 1,
-      temperature: 0.9   //Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
+      temperature: temperature  //Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
     };
 
     const headers = {
@@ -195,8 +206,11 @@ client.on('messageCreate', message => {
       //if text available, get text from objects[0].text
       if (response.data.objects[0].text != undefined) {
         console.log("using text from diffbot response");
-        const text = response.data.objects[0].text;
+        var text = response.data.objects[0].text;
         const title = response.data.objects[0].title;
+        if (text.length > 10000) {
+          text = text.substring(0, 10000);
+        }
         consumed_text[message.channel][keyword] = text;
       }
 
@@ -220,7 +234,11 @@ client.on('messageCreate', message => {
         console.log("using html from diffbot response");
         const html = response.data.objects[0].html;
         const title = response.data.objects[0].title;
-        const text = htmlToText.fromString(html);
+        var text = htmlToText.fromString(html);
+        //if text is longer than 10000 characters, truncate it
+        if (text.length > 10000) {
+          text = text.substring(0, 10000);
+        }
         consumed_text[message.channel][keyword] = text;
       }
 
@@ -252,6 +270,11 @@ client.on('messageCreate', message => {
     const keyword = args[2];
     const prompt = args.slice(3).join(' ');
 
+    //initialize the consumed_text object if it doesn't exist
+    if (consumed_text[message.channel] == undefined) {
+      consumed_text[message.channel] = [];
+    }
+
     if (!consumed_text[message.channel][keyword]) {
       message.channel.send("Sorry, I don't remember that. Try '!openai consume <url> as <keyword>'");
       return;
@@ -266,7 +289,7 @@ client.on('messageCreate', message => {
     const bodyParameters = {
       prompt: complete_prompt,
       model: 'text-davinci-003',
-      max_tokens: 486,
+      max_tokens: 200,
       n: 1,
       temperature: 0.9   //Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
     };
