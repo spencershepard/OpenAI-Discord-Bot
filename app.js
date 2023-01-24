@@ -36,9 +36,12 @@ client.on('ready', () => {
 client.on('messageCreate', message => {
 
   var command = null
-  if (message.content.startsWith('!openai consume')) {
+  if (message.content.startsWith('!openai consume this')) {
+    command = "consume_this";
+  }
+  else if (message.content.startsWith('!openai consume')) {
     command = "consume";
-  } 
+  }
   else if(message.content.startsWith('!openai with')) {
     command = "openai_with";
   }
@@ -255,6 +258,61 @@ client.on('messageCreate', message => {
     });
 
   }  //end of CONSUME COMMAND
+
+  //'CONSUME THIS' COMMAND
+  if (command == "consume_this") {
+    //the command will be in the format !openai consume this as <keyword>
+    console.log('Received command: ' + message.content);
+    message.channel.sendTyping();
+    // Split the message into an array of arguments
+    const args = message.content.split(' ');
+    if (args.length != 5) {
+      message.channel.send("Sorry, I didn't understand that. Try !openai consume this as <keyword> on a message containing a text attachment.");
+      return;
+    }
+    const keyword = args[4];
+
+
+    if (message.attachments.size == 0) {
+      message.channel.send("You'll need to supply a text attachment with that command.");
+      return;
+    }
+
+    if (consumed_text[message.channel] == undefined) {
+      consumed_text[message.channel] = [];
+    }
+
+    //validate the attachment as text
+    const attachment = message.attachments.first();
+    console.log('attachment uploaded of type: ' + attachment.contentType)
+
+    //if attachment.contentType does not include text, return an error
+
+    if (!attachment.contentType.includes("text")) {
+      message.channel.send("Sorry, I can only consume text files.");
+      return;
+    }
+
+    
+    //download the attachment and get the text
+    const url = attachment.url;
+
+    axios.get(url, {headers: { "Accept-Encoding": "gzip,deflate,compress" }}).then(response => {
+      console.log(response.data);
+      var text = response.data;
+      //if text is longer than 9000 characters, truncate it
+      if (text.length > 9000) {
+        text = text.substring(0, 9000);
+      }
+      consumed_text[message.channel][keyword] = text;
+      message.channel.send("I've consumed this as " + keyword);
+    }).catch(error => {
+      console.error(error);
+      message.channel.send("Sorry, there was an unknown error.");
+    });
+  }  //end of CONSUME THIS COMMAND
+
+
 
   //'WITH' COMMAND
   if (command == "openai_with") {
