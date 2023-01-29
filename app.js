@@ -10,12 +10,15 @@ const discord_token = process.env.DISCORD_BOT_TOKEN
 const openai_api_key = process.env.OPENAI_API_KEY
 const diffbot_token = process.env.DIFFBOT_TOKEN
 
-// keep a running dialog with the bot
-const running_conversation = true;
-var conversations = {};
+//import settings.js
+const settings = require('./settings.js');
+//const bot_memories = require('./bot-memories.js');
+//import remember.js as bot_memories
+const bot_memories = require('./remember.js');
+const openai_text = require('./openai_text.js');
+const consume = require('./consume.js');
 
-// save some webpage text to send with our prompts
-var consumed_text = {};
+
 
 // create new discord client
 const client = new Client({
@@ -37,16 +40,22 @@ client.on('messageCreate', message => {
 
   var command = null
   if (message.content.startsWith('!openai consume this')) {
-    command = "consume_this";
+    consume.consume_attachment(message);
   }
   else if (message.content.startsWith('!openai consume')) {
-    command = "consume";
+    consume.consume_webpage(message);
+  }
+  else if (message.content.startsWith('!openai remember')) {
+    command = "remember";
   }
   else if(message.content.startsWith('!openai with')) {
-    command = "openai_with";
+    consume.with(message);
+  }
+  else if (message.content.startsWith('!openai reset')) {
+    command = "reset";
   }
   else if (message.content.startsWith('!openai')) {
-    command = "openai_prompt";
+    openai_text.sendPrompt(message);
   } 
   else if (message.content.startsWith('!dalle')) {
     command = "dalle";
@@ -54,65 +63,10 @@ client.on('messageCreate', message => {
 
 
 
+
   //OPENAI COMMAND
   if (command == "openai_prompt") {
-    message.channel.sendTyping();
-    console.log('Received command: ' + message.content);
-    // Split the message into an array of arguments
-    const args = message.content.split(' ');
-    // Get the command and any additional arguments
-    const command = args[0];
-    if (args.length < 2) {
-      message.channel.send("Please provide a prompt.");
-      return;
-    }
-
-    var temperature = 0.9;
-    if (message.content.includes("bereal") || message.content.includes("be real") || message.content.includes("be honest") || message.content.includes("no really") || message.content.includes("for real")) {
-      temperature = 0;
-      console.log("Setting temperature to 0, because we found an honesty prompt.");
-    }
-
-    const text = args.slice(1).join(' ');
-    var prompt = text;
-    if (running_conversation) {
-      if (conversations[message.channel] == undefined) {
-        conversations[message.channel] = "";
-      }
-      prompt = conversations[message.channel] + "\n" + message.author.username + ": " + text;
-      prompt = prompt + "\n" + "OpenAI: ";
-    }
-
-    console.log(prompt);
-
-    const bodyParameters = {
-      prompt: prompt,
-      model: 'text-davinci-003',
-      max_tokens: 486,
-      n: 1,
-      temperature: temperature  //Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
-    };
-
-    const headers = {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + openai_api_key
-    };
-
-    // Send the text to the OpenAI API and get the response
-    axios.post('https://api.openai.com/v1/completions',
-      bodyParameters,
-      { headers: headers }
-    ).then(response => {
-      // Send the response back to the Discord channel
-      message.channel.send(response.data.choices[0].text);
-      if (running_conversation) {
-        conversations[message.channel] = conversations[message.channel] + "\n" + message.author.username + ": " + text + "\n" + "OpenAI: " + response.data.choices[0].text;
-      }
-
-    }).catch(error => {
-      console.error(error);
-      handle_openai_error(error, message);
-    });
+    openai_text.sendPrompt(message);
   } //End of OPENAI COMMAND
 
 
@@ -159,219 +113,32 @@ client.on('messageCreate', message => {
     });
   }  //end of DALLE COMMAND
 
-  //CONSUME COMMAND
-  if (command == "consume") {
-    //the command will be in the format !openai consume <url> as <keyword>
+ 
+
+  //'REMEMBER' COMMAND
+  if (command == "remember") {
+    //the command will be in the format !openai remember <prompt>
     console.log('Received command: ' + message.content);
     // Split the message into an array of arguments
     const args = message.content.split(' ');
-    if (args.length != 5) {
-      message.channel.send("Sorry, I didn't understand that. Try !openai consume <url> as <keyword>");
-      return;
-    }
-    const url = args[2];
-    const keyword = args[4]
-
-    if ((args[3] != "as") || (!url.startsWith("http"))) {
-      message.channel.send("Sorry, I didn't understand that. Try !consume <url> as <keyword>");
+    if (args.length < 3) {
+      message.channel.send("Sorry, I didn't understand that. Try '!openai remember <prompt>'");
       return;
     }
 
-    message.channel.send("This will take a moment.  I'll let you know when I'm finished reading.");
+    const prompt = args.slice(2).join(' ');
+    bot_memories.add(message.channel, prompt);
+    message.channel.send("I'll remember that. In fact...that's all I remember.");
+    openai_text.resetConversation(message);
 
+  }
 
-    const urlParams = {
-      token: diffbot_token,
-      url: url
-    }
-    
-    const headers = {
-      accept: "application/json"
-    };
-
-    // Fetch from the API and get the response
-    axios.get('https://api.diffbot.com/v3/article',
-      { params: urlParams },
-      { headers: headers }
-    ).then(response => {
-      console.log(response.data);
-      
-      //initialize the consumed_text object if it doesn't exist
-      if (consumed_text[message.channel] == undefined) {
-        consumed_text[message.channel] = [];
-      }
-
-      if (response.data.objects[0].type == undefined) {
-        message.channel.send("Sorry, I can't consume " + url + " as " + keyword + ".  Something went wrong.");
-        return;
-      }
-
-      //if text available, get text from objects[0].text
-      if (response.data.objects[0].text != undefined) {
-        console.log("using text from diffbot response");
-        var text = response.data.objects[0].text;
-        const title = response.data.objects[0].title;
-        if (text.length > 10000) {
-          text = text.substring(0, 10000);
-        }
-        consumed_text[message.channel][keyword] = text;
-      }
-
-      //if list type, get text from array of objects[0].items
-      // else if (response.data.objects[0].type == "list") {
-      //   console.log("using list data from diffbot response");
-      //   //get text from array of objects[0].items
-      //   const items = response.data.objects[0].items;
-      //   let text = "";
-      //   for (let i = 0; i < items.length; i++) {
-      //     text = text + items[i].title;
-      //     if (items[i].summary != undefined) {
-      //       text = text + ": " + items[i].summary;
-      //     }
-      //     text = text + "\n";
-      //   }
-      //   consumed_text[message.channel][keyword] = text;
-      // }
-
-      else if (response.data.objects[0].html != undefined) {
-        console.log("using html from diffbot response");
-        const html = response.data.objects[0].html;
-        const title = response.data.objects[0].title;
-        var text = htmlToText.fromString(html);
-        //if text is longer than 10000 characters, truncate it
-        if (text.length > 10000) {
-          text = text.substring(0, 10000);
-        }
-        consumed_text[message.channel][keyword] = text;
-      }
-
-      else {
-        message.channel.send("Sorry, I can't consume " + url + ".  I wasn't able to retrieve any significant data.");
-        return;
-      }
-
-      message.channel.send("I've consumed " + url + " as " + keyword);
-      
-
-    }).catch(error => {
-      console.error(error);
-    });
-
-  }  //end of CONSUME COMMAND
-
-  //'CONSUME THIS' COMMAND
-  if (command == "consume_this") {
-    //the command will be in the format !openai consume this as <keyword>
-    console.log('Received command: ' + message.content);
-    message.channel.sendTyping();
-    // Split the message into an array of arguments
-    const args = message.content.split(' ');
-    if (args.length != 5) {
-      message.channel.send("Sorry, I didn't understand that. Try !openai consume this as <keyword> on a message containing a text attachment.");
-      return;
-    }
-    const keyword = args[4];
-
-
-    if (message.attachments.size == 0) {
-      message.channel.send("You'll need to supply a text attachment with that command.");
-      return;
-    }
-
-    if (consumed_text[message.channel] == undefined) {
-      consumed_text[message.channel] = [];
-    }
-
-    //validate the attachment as text
-    const attachment = message.attachments.first();
-    console.log('attachment uploaded of type: ' + attachment.contentType)
-
-    //if attachment.contentType does not include text, return an error
-
-    if (!attachment.contentType.includes("text")) {
-      message.channel.send("Sorry, I can only consume text files.");
-      return;
-    }
-
-    
-    //download the attachment and get the text
-    const url = attachment.url;
-
-    axios.get(url, {headers: { "Accept-Encoding": "gzip,deflate,compress" }}).then(response => {
-      console.log(response.data);
-      var text = response.data;
-      //if text is longer than 9000 characters, truncate it
-      if (text.length > 9000) {
-        text = text.substring(0, 9000);
-      }
-      consumed_text[message.channel][keyword] = text;
-      message.channel.send("I've consumed this as " + keyword);
-    }).catch(error => {
-      console.error(error);
-      message.channel.send("Sorry, there was an unknown error.");
-    });
-  }  //end of CONSUME THIS COMMAND
-
-
-
-  //'WITH' COMMAND
-  if (command == "openai_with") {
-    message.channel.sendTyping();
-    //the command will be in the format !openai with <keyword> <prompt>
-    console.log('Received command: ' + message.content);
-    // Split the message into an array of arguments
-    const args = message.content.split(' ');
-    if (args.length < 4) {
-      message.channel.send("Sorry, I didn't understand that. Try '!openai with <keyword> <prompt>' after '!openai consume <url> as <keyword>'");
-      return;
-    }
-    const keyword = args[2];
-    const prompt = args.slice(3).join(' ');
-
-    //initialize the consumed_text object if it doesn't exist
-    if (consumed_text[message.channel] == undefined) {
-      consumed_text[message.channel] = [];
-    }
-
-    if (!consumed_text[message.channel][keyword]) {
-      message.channel.send("Sorry, I don't remember that. Try '!openai consume <url> as <keyword>'");
-      return;
-    }
-
-    var complete_prompt = keyword + ":" + consumed_text[message.channel][keyword] + "\n" 
-            + message.author.username + ":" + prompt + "\n"
-            + "OpenAI:";
-
-    console.log(complete_prompt);
-
-    const bodyParameters = {
-      prompt: complete_prompt,
-      model: 'text-davinci-003',
-      max_tokens: 200,
-      n: 1,
-      temperature: 0.9   //Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
-    };
-
-    const headers = {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + openai_api_key
-    };
-
-    // Send the text to the OpenAI API and get the response
-    axios.post('https://api.openai.com/v1/completions',
-      bodyParameters,
-      { headers: headers }
-    ).then(response => {
-      // Send the response back to the Discord channel
-      message.channel.send(response.data.choices[0].text);
-
-    }).catch(error => {
-      console.error(error);
-      handle_openai_error(error, message);
-    });
-
-  }  //end of WITH COMMAND
-
+  //'RESET' COMMAND
+  if (command == "reset") {
+    //clear the conversation history for this channel
+    openai_text.resetConversation(message);
+    message.channel.send("Conversation history cleared.");
+  }
 
 
   //if message has attachment
@@ -460,31 +227,7 @@ const getDalleVariation = async (image_data, message) => {
   });
 }
 
-const handle_openai_error = (error, message) => {
-  if (error.response && error.response.data) {
-    if ( error.response.data.error && error.response.data.error.message) {
-      
-      if (error.response.data.error.message.startsWith("This model's maximum context length")) {
-        // Tokens are a bit tricky to manage, so if we run out of tokens, just reset the conversation
-        message.channel.send("Hi! That other bot was tired, so I'm taking over. What do you want to talk about?");
-        conversations[message.channel] = "";
-      }
 
-      if (error.response.data.error.message.startsWith("You have reached your")) {
-        message.channel.send("Sorry, I'm out of tokens for the day. Try again later!");
-      }
-      
-      if (error.response.data.error.message.startsWith("That model is currently overloaded")) {
-        message.channel.send("Sorry, I'm a bit bogged down right now. Try again in a few minutes!");
-      }
-
-      if (error.response.data.error.message.startsWith("You exceeded your current quota")) {
-        message.channel.send("Sorry, I'm out of credits. Try again later!");
-      }
-    }
-    console.log(error.response.data);
-  }
-}
 
 
 //Do not commit with your token in the code...use .env file

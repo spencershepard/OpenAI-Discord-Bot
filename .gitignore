@@ -127,3 +127,6 @@ dist
 .pnp.*
 image.png
 openai_bot.bat
+*.yaml
+bot-memories.yaml
+bot-memories.yaml
