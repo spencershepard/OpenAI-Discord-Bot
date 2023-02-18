@@ -12,8 +12,6 @@ const diffbot_token = process.env.DIFFBOT_TOKEN
 
 //import settings.js
 const settings = require('./settings.js');
-//const bot_memories = require('./bot-memories.js');
-//import remember.js as bot_memories
 const bot_memories = require('./remember.js');
 const openai_text = require('./openai_text.js');
 const consume = require('./consume.js');

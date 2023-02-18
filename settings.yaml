@@ -1,3 +1,0 @@
-text_completion_model: text-davinci-003
-text_completion_temperature: 0.9
-conversation: true

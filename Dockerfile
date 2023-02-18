@@ -4,6 +4,8 @@ FROM node:latest
 ADD . /app
 #set working directory
 WORKDIR /app
+#add data folder
+VOLUME ["/app/data"]
 #install dependencies
 RUN npm install
 #expose port

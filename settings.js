@@ -11,12 +11,12 @@ var default_settings = {
 var settings = {}
 
 try {
-  settings = yaml.load(fs.readFileSync('settings.yaml', 'utf8'));
+  settings = yaml.load(fs.readFileSync('data/settings.yaml', 'utf8'));
 } catch (e) {
   console.log(e);
   console.log("Creating new settings file.");
   settings = default_settings;
-    fs.writeFileSync('settings.yaml', yaml.dump(settings));
+    fs.writeFileSync('data/settings.yaml', yaml.dump(settings));
 }
 
 //function for getting the settings. If the key is not found, get the value from default_settings
@@ -31,7 +31,7 @@ settings.get = function(key) {
 //a function for updating the settings
 settings.update = function(key, value) {
     settings[key] = value;
-    fs.writeFileSync('settings.yaml', yaml.safeDump(settings));
+    fs.writeFileSync('data/settings.yaml', yaml.safeDump(settings));
 }
 
 //export the settings module

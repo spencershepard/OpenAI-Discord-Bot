@@ -9,18 +9,18 @@ bot_memories.memories = {};
 
 try {
 
-    bot_memories.memories = yaml.load(fs.readFileSync('bot-memories.yaml', 'utf8'));
+    bot_memories.memories = yaml.load(fs.readFileSync('data/bot-memories.yaml', 'utf8'));
 
 } catch (e) {
     console.log(e);
     //write the file
-    fs.writeFileSync('bot-memories.yaml', yaml.dump(bot_memories.memories));
+    fs.writeFileSync('data/bot-memories.yaml', yaml.dump(bot_memories.memories));
 }
 
 //function for adding a memory, takes a key and a value
 bot_memories.add = function(key, value) {
     bot_memories.memories[key] = value;
-    fs.writeFileSync('bot-memories.yaml', yaml.dump(bot_memories.memories));
+    fs.writeFileSync('data/bot-memories.yaml', yaml.dump(bot_memories.memories));
 }
 
 //function for getting a memory, takes a key
@@ -36,7 +36,7 @@ bot_memories.get = function(key) {
 //function for deleting a memory, takes a key
 bot_memories.delete = function(key) {
     delete bot_memories.memories[key];
-    fs.writeFileSync('bot-memories.yaml', yaml.dump(bot_memories.memories));
+    fs.writeFileSync('data/bot-memories.yaml', yaml.dump(bot_memories.memories));
 }
 
 //export the module
