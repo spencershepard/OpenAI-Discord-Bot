@@ -23,7 +23,11 @@ imitate.imitate_user = function (message) {
         return;
     }
 
-    const input_prompt = args.slice(3).join(' ');
+    //get the input prompt if there is one
+    let input_prompt = "";
+    if (args.length >= 4) {
+        input_prompt = args.slice(3).join(' ');
+    }
     console.log('the input prompt:' + input_prompt);
 
 
