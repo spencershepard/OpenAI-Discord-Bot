@@ -1,7 +1,6 @@
 const axios = require('axios');
 require('dotenv').config();
 const settings = require('./settings.js');
-const bot_memories = require('./remember.js');
 const handle_openai_error = require('./openai_error.js');
 
 const openai_api_key = process.env.OPENAI_API_KEY
@@ -17,11 +16,6 @@ imitate.imitate_user = function (message) {
 
     //the message will be structured like this: !openai imitate @user prompt
 
-    if (args.length < 3) {
-        message.channel.send("Please structure the command like this: !openai imitate @user prompt");
-        return;
-    }
-
     //get the user
     const user = message.mentions.users.first();
     if (!user) {
@@ -35,7 +29,7 @@ imitate.imitate_user = function (message) {
 
 
     //get the user's messages asynchonously
-    message.channel.messages.fetch({ limit: 100 })
+    message.channel.messages.fetch({ limit: settings.get('imitate_messages_history') })
         .then(messages => {
             const user_messages = messages.filter(m => m.author.id === user.id);
 

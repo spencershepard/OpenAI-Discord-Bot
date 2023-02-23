@@ -6,6 +6,7 @@ var default_settings = {
     "text_completion_model": "text-davinci-003",
     "text_completion_temperature": 0.9,
     "conversation": true,
+    "imitate_messages_history": 500,
   }
 
 var settings = {}
