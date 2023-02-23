@@ -15,6 +15,7 @@ const settings = require('./settings.js');
 const bot_memories = require('./remember.js');
 const openai_text = require('./openai_text.js');
 const consume = require('./consume.js');
+const imitate = require('./imitate.js');
 
 
 
@@ -51,6 +52,9 @@ client.on('messageCreate', message => {
   }
   else if (message.content.startsWith('!openai reset')) {
     command = "reset";
+  }
+  else if (message.content.startsWith('!openai imitate')) {
+    imitate.imitate_user(message);
   }
   else if (message.content.startsWith('!openai')) {
     openai_text.sendPrompt(message);
