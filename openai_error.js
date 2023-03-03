@@ -5,7 +5,7 @@ const handle_openai_error = (error, message) => {
             if (error.response.data.error.message.startsWith("This model's maximum context length")) {
                 // Tokens are a bit tricky to manage, so if we run out of tokens, just reset the conversation
                 message.channel.send("Hi! That other bot was tired, so I'm taking over. What do you want to talk about?");
-                conversations[message.channel] = "";
+                conversations[message.channel] = [];
             }
 
             if (error.response.data.error.message.startsWith("You have reached your")) {

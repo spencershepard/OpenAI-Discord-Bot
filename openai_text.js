@@ -29,27 +29,33 @@ openai_text.sendPrompt = function (message) {
 
     const text = args.slice(1).join(' ');
     var prompt = text;
-    if (settings.get('conversation')) {
-        if (conversations[message.channel] == undefined) {
-            conversations[message.channel] = "";
-        }
-        prompt = conversations[message.channel] + "\n" + message.author.username + ": " + text;
-        prompt = prompt + "\n" + "OpenAI: ";
+
+    if (conversations[message.channel] == undefined) {
+        conversations[message.channel] = [];
     }
+    // prompt = conversations[message.channel] + "\n" + message.author.username + ": " + text;
+    // prompt = prompt + "\n" + "OpenAI: ";
+    //add the user's message to the conversation as a new object
+    conversations[message.channel].push({ "role": "user", "content": message.author.username + ": " + text });
+
+    var gpt_messages = [];
     //if there is a bot memory
     const memory = bot_memories.get(message.channel);
     if (memory) {
-        prompt = memory + "\n" + prompt;
+        gpt_messages.push({ "role": "system", "content": memory });
     }
+    //add the conversation objects to the gpt_messages array
+    gpt_messages = gpt_messages.concat(conversations[message.channel]);
 
-    console.log(prompt);
+    console.log(gpt_messages);
 
     const bodyParameters = {
-        prompt: prompt,
-        model: settings.get('text_completion_model'),
+        //prompt: prompt,
+        model: 'gpt-3.5-turbo',
         max_tokens: 486,
         n: 1,
-        temperature: temperature  //Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
+        temperature: temperature,  //Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
+        messages: gpt_messages,
     };
 
     const headers = {
@@ -58,15 +64,14 @@ openai_text.sendPrompt = function (message) {
     };
 
     // Send the text to the OpenAI API and get the response
-    axios.post('https://api.openai.com/v1/completions',
+    axios.post('https://api.openai.com/v1/chat/completions',
         bodyParameters,
         { headers: headers }
     ).then(response => {
         // Send the response back to the Discord channel
-        message.channel.send(response.data.choices[0].text);
-        if (settings.get('conversation')) {
-            conversations[message.channel] = conversations[message.channel] + "\n" + message.author.username + ": " + text + "\n" + "OpenAI: " + response.data.choices[0].text;
-        }
+        message.channel.send(response.data.choices[0].message.content);
+        //add the bot's response to the conversation as a new object
+        conversations[message.channel].push({ "role": "assistant", "content": response.data.choices[0].message.content });
 
     }).catch(error => {
         console.error(error);
@@ -75,7 +80,7 @@ openai_text.sendPrompt = function (message) {
 }
 
 openai_text.resetConversation = function (message) {
-    conversations[message.channel] = "";
+    conversations[message.channel] = [];
 }
 
 module.exports = openai_text;
