@@ -75,7 +75,7 @@ openai_text.sendPrompt = function (message) {
 
     }).catch(error => {
         console.error(error);
-        handle_openai_error(error, message);
+        handle_openai_error(error, message, conversations);
     });
 }
 

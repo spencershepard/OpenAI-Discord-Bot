@@ -1,4 +1,4 @@
-const handle_openai_error = (error, message) => {
+const handle_openai_error = (error, message, conversations) => {
     if (error.response && error.response.data) {
         if (error.response.data.error && error.response.data.error.message) {
 

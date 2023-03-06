@@ -54,7 +54,9 @@ client.on('messageCreate', message => {
     command = "reset";
   }
   else if (message.content.startsWith('!openai imitate')) {
-    imitate.imitate_user(message);
+    //imitate.imitate_user(message);
+    //send response to channel
+    message.channel.send("This command is currently disabled. Please try again later.");
   }
   else if (message.content.startsWith('!openai')) {
     openai_text.sendPrompt(message);
