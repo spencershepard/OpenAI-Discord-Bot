@@ -58,6 +58,9 @@ client.on('messageCreate', message => {
     //send response to channel
     message.channel.send("This command is currently disabled. Please try again later.");
   }
+  else if (message.content.startsWith('!openai temperature')) {
+    openai_text.set_temp(message);
+  }
   else if (message.content.startsWith('!openai')) {
     openai_text.sendPrompt(message);
   } 

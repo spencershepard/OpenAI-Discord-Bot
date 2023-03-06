@@ -21,7 +21,8 @@ openai_text.sendPrompt = function (message) {
         return;
     }
 
-    var temperature = settings.get('text_completion_temperature');
+    // determine temperature
+    var temperature = settings.get([message.channel + "_temperature"], 0.8);
     if (message.content.includes("bereal") || message.content.includes("be real") || message.content.includes("be honest") || message.content.includes("no really") || message.content.includes("for real")) {
         temperature = 0;
         console.log("Setting temperature to 0, because we found an honesty prompt.");
@@ -47,8 +48,6 @@ openai_text.sendPrompt = function (message) {
     //add the conversation objects to the gpt_messages array
     gpt_messages = gpt_messages.concat(conversations[message.channel]);
 
-    console.log(gpt_messages);
-
     const bodyParameters = {
         //prompt: prompt,
         model: 'gpt-3.5-turbo',
@@ -57,6 +56,8 @@ openai_text.sendPrompt = function (message) {
         temperature: temperature,  //Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
         messages: gpt_messages,
     };
+
+    console.log(JSON.stringify(bodyParameters, null, 2));
 
     const headers = {
         'Content-Type': 'application/json',
@@ -72,6 +73,7 @@ openai_text.sendPrompt = function (message) {
         message.channel.send(response.data.choices[0].message.content);
         //add the bot's response to the conversation as a new object
         conversations[message.channel].push({ "role": "assistant", "content": response.data.choices[0].message.content });
+        console.log("OpenAI: " + response.data.choices[0].message.content);
 
     }).catch(error => {
         console.error(error);
@@ -81,6 +83,27 @@ openai_text.sendPrompt = function (message) {
 
 openai_text.resetConversation = function (message) {
     conversations[message.channel] = [];
+}
+
+openai_text.set_temp = function (message){
+    const args = message.content.split(' ');
+    if (args.length < 2) {
+        message.channel.send("Please provide a temperature.");
+        return;
+    }
+    var temperature = args[2];
+    if (isNaN(temperature)) {
+        message.channel.send("Please provide a number.");
+        return;
+    }
+    if (temperature < 0 || temperature > 1) {
+        message.channel.send("Please provide a number between 0 and 1.");
+        return;
+    }
+    console.log("Setting temperature to " + temperature + " for this channel: " + message.channel);
+    settings.update(message.channel + "_temperature", parseFloat(temperature));
+    message.channel.send("Temperature set to " + temperature + " for this channel.");
+
 }
 
 module.exports = openai_text;
