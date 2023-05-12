@@ -36,7 +36,8 @@ consume.consume_webpage = function (message) {
     }
 
     const headers = {
-        accept: "application/json"
+        accept: "application/json",
+        'Accept-Encoding': 'gzip,deflate,compress'
     };
 
     // Fetch from the API and get the response
@@ -189,7 +190,8 @@ consume.with = function (message) {
 
     const headers = {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + openai_api_key
+        Authorization: 'Bearer ' + openai_api_key,
+        'Accept-Encoding': 'gzip,deflate,compress'
     };
 
     // Send the text to the OpenAI API and get the response
