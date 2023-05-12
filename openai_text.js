@@ -61,7 +61,8 @@ openai_text.sendPrompt = function (message) {
 
     const headers = {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + openai_api_key
+        Authorization: 'Bearer ' + openai_api_key,
+        'Accept-Encoding': 'gzip,deflate,compress'
     };
 
     // Send the text to the OpenAI API and get the response
